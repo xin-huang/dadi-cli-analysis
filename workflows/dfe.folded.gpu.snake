@@ -1,0 +1,186 @@
+population_list = [
+    #'ACB',
+    #'ASW',
+    #'BEB',
+    #'CDX',
+    #'CEU',
+    #'CHB',
+    #'CHS',
+    #'CLM',
+    #'ESN',
+    #'FIN',
+    #'GBR',
+    #'GIH',
+    #'GWD',
+    #'IBS',
+    #'ITU',
+    #'JPT',
+    #'KHV',
+    #'LWK',
+    #'MSL',
+    #'MXL',
+    #'PEL',
+    #'PJL',
+    #'PUR',
+    #'STU',
+    #'TSI',
+    'YRI',
+]
+
+sample_size_list = {
+    'ACB': 96*2,
+    'ASW': 61*2,
+    'BEB': 86*2,
+    'CDX': 93*2,
+    'CEU': 99*2,
+    'CHB': 103*2,
+    'CHS': 105*2,
+    'CLM': 94*2,
+    'ESN': 99*2,
+    'FIN': 99*2,
+    'GBR': 91*2,
+    'GIH': 103*2,
+    'GWD': 113*2,
+    'IBS': 107*2,
+    'ITU': 102*2,
+    'JPT': 104*2,
+    'KHV': 99*2,
+    'LWK': 99*2,
+    'MSL': 85*2,
+    'MXL': 64*2,
+    'PEL': 85*2,
+    'PJL': 96*2,
+    'PUR': 104*2,
+    'STU': 102*2,
+    'TSI': 107*2,
+    'YRI': 108*2,
+}
+
+#model_list = ['two_epoch', 'three_epoch']
+model_list = ['two_epoch']
+model_params_list = {
+    'two_epoch': {
+        'p0': '5 5',
+        'ubounds': '100 100',
+        'lbounds': '10e-3 10e-3',
+    },
+    'three_epoch': {
+        'p0': '0.5 5 5 5',
+        'ubounds': '1 100 100 100',
+        'lbounds': '10e-3 10e-3 10e-3 10e-3',
+    },
+}
+dfe_list = ['gamma']
+dfe_params_list = {
+    'gamma': {
+        'p0': '5 500',
+        'ubounds': '100 5000',
+        'lbounds': '10e-3 10e-3',
+    },
+    'lognormal': {
+        'p0': '5 5',
+        'ubounds': '100 100',
+        'lbounds': '10e-3 10e-3',
+    },
+}
+
+
+rule all:
+    input:
+        expand("results/populations/{population}/dfe/folded/InferDFE_gpu/{population}.{model}.{dfe}.InferDFE.bestfits", population=population_list, model=model_list, dfe=dfe_list),
+
+
+rule extract_samples:
+    input:
+        synonymous_vcf = "results/exonic_data/ALL.synonymous.vcf.gz",
+        nonsynonymous_vcf = "results/exonic_data/ALL.nonsynonymous.vcf.gz",
+        samples = "data/populations/{population}.list",
+    output:
+        synonymous_vcf = "results/populations/{population}/{population}.synonymous.biallelic.snps.vcf.gz",
+        nonsynonymous_vcf = "results/populations/{population}/{population}.nonsynonymous.biallelic.snps.vcf.gz",
+        info = "results/populations/{population}/{population}.info",
+    shell:
+        """
+        bcftools view {input.synonymous_vcf} -S <(awk '{{print $1}}' {input.samples}) --force-samples -v snps -m 2 -M 2 | bgzip -c > {output.synonymous_vcf}
+        bcftools view {input.nonsynonymous_vcf} -S <(awk '{{print $1}}' {input.samples}) --force-samples -v snps -m 2 -M 2 | bgzip -c > {output.nonsynonymous_vcf}
+        tabix -p vcf {output.synonymous_vcf}
+        tabix -p vcf {output.nonsynonymous_vcf}
+        bcftools query -l {output.synonymous_vcf} | awk -v pop={wildcards.population} '{{print $1"\\t"pop}}' > {output.info}
+        """
+
+
+rule generate_fs:
+    input:
+        synonymous_vcf = rules.extract_samples.output.synonymous_vcf,
+        nonsynonymous_vcf = rules.extract_samples.output.nonsynonymous_vcf,
+        info = rules.extract_samples.output.info,
+    output:
+        synonymous_fs = "results/populations/{population}/dfe/folded/{population}.synonymous.folded.fs",
+        nonsynonymous_fs = "results/populations/{population}/dfe/folded/{population}.nonsynonymous.folded.fs",
+    params:
+        sample_size = lambda wildcards: sample_size_list[wildcards.population]
+    shell:
+        """
+        dadi-cli GenerateFs --vcf {input.synonymous_vcf} --pop-ids {wildcards.population} --pop-info {input.info} --projections {params.sample_size} --output {output.synonymous_fs}
+        dadi-cli GenerateFs --vcf {input.nonsynonymous_vcf} --pop-ids {wildcards.population} --pop-info {input.info} --projections {params.sample_size} --output {output.nonsynonymous_fs}
+        """
+
+
+rule infer_dm:
+    input:
+        fs = rules.generate_fs.output.synonymous_fs,
+    output:
+        bestfit = "results/populations/{population}/dfe/folded/InferDM_gpu/{population}.{model}.InferDM.bestfits",
+    resources:
+        gpus = 1,
+    params:
+        model = lambda wildcards: wildcards.model,
+        p0 = lambda wildcards: model_params_list[wildcards.model]['p0'],
+        ubounds = lambda wildcards: model_params_list[wildcards.model]['ubounds'],
+        lbounds = lambda wildcards: model_params_list[wildcards.model]['lbounds'],
+        grid_size = '300 400 500',
+        output_prefix = lambda wildcards: f"results/populations/{wildcards.population}/dfe/folded/InferDM_gpu/{wildcards.population}.{wildcards.model}",
+    shell:
+        """
+        dadi-cli InferDM --fs {input.fs} --model {params.model} --p0 {params.p0} --ubounds {params.ubounds} --lbounds {params.lbounds} --output-prefix {params.output_prefix} --grids {params.grid_size} --gpus {resources.gpus} --nomisid --force-convergence
+        """
+
+
+rule generate_cache:
+    input:
+        bestfit = rules.infer_dm.output.bestfit,
+    output:
+        cache = "results/populations/{population}/dfe/folded/InferDFE_gpu/{population}.{model}.spectra.bpkl",
+    resources:
+        gpus = 1,
+    params:
+        model = lambda wildcards: f"{wildcards.model}_sel",
+        sample_size = lambda wildcards: sample_size_list[wildcards.population],
+        grid_size = "800 1000 1200",
+        gamma_pts = 2000,
+    shell:
+        """
+        dadi-cli GenerateCache --model {params.model} --demo-popt {input.bestfit} --sample-size {params.sample_size} --output {output.cache} --gpus {resources.gpus} --grids {params.grid_size} --gamma-pts {params.gamma_pts}
+        """
+
+
+rule infer_dfe:
+    input:
+        fs = rules.generate_fs.output.nonsynonymous_fs,
+        cache = rules.generate_cache.output.cache,
+        dm_bestfit = rules.infer_dm.output.bestfit,
+    output:
+        bestfit = "results/populations/{population}/dfe/folded/InferDFE_gpu/{population}.{model}.{dfe}.InferDFE.bestfits",
+    resources:
+        gpus = 1,
+    params:
+        dfe = lambda wildcards: wildcards.dfe,
+        p0 = lambda wildcards: dfe_params_list[wildcards.dfe]['p0'],
+        ubounds = lambda wildcards: dfe_params_list[wildcards.dfe]['ubounds'],
+        lbounds = lambda wildcards: dfe_params_list[wildcards.dfe]['lbounds'],
+        ratio = 2.31,
+        output_prefix = lambda wildcards: f"results/populations/{wildcards.population}/dfe/folded/InferDFE_gpu/{wildcards.population}.{wildcards.model}.{wildcards.dfe}", 
+    shell:
+        """
+        dadi-cli InferDFE --fs {input.fs} --cache1d {input.cache} --demo-popt {input.dm_bestfit} --output-prefix {params.output_prefix} --pdf1d {params.dfe} --p0 {params.p0} --ubounds {params.ubounds} --lbounds {params.lbounds} --ratio {params.ratio} --gpus {resources.gpus} --nomisid --force-convergence
+        """

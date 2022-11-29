@@ -1,0 +1,79 @@
+chr_name_list = [c+1 for c in range(22)]
+
+
+rule all:
+    input:
+        expand("results/exonic_data/ALL.{mut_type}.vcf.gz", mut_type=['synonymous', 'nonsynonymous']),
+
+
+rule extract_biallelic_snps:
+    input:
+        vcf = "data/genotypes/ALL.chr{chr_name}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz",
+    output:
+        vcf = "results/genotypes/ALL.chr{chr_name}.phase3_shapeit2_mvncall_integrated_v5a.20130502.biallelic.snps.genotypes.vcf.gz",
+    shell:
+        """
+        bcftools view {input.vcf} -v snps -m 2 -M 2 | bgzip -c > {output.vcf}
+        tabix -p vcf {output.vcf}
+        """
+
+
+rule run_annovar:
+    input:
+        vcf = rules.extract_biallelic_snps.output.vcf,
+    output:
+        vcf = "results/genotypes/ALL.chr{chr_name}.annotated.biallelic.snps.hg19_multianno.vcf",
+        txt = "results/genotypes/ALL.chr{chr_name}.annotated.biallelic.snps.hg19_multianno.txt",
+    resources:
+        cpus = 8,
+    params:
+        output_prefix = lambda wildcards: f"results/genotypes/ALL.chr{wildcards.chr_name}.annotated.biallelic.snps",
+    shell:
+        """
+        ext/annovar/table_annovar.pl {input.vcf} ext/annovar/humandb/ -buildver hg19 -out {params.output_prefix} -remove -protocol refGene,avsnp150,dbnsfp42c -operation g,f,f -nastring . -vcfinput --thread {resources.cpus}
+        """
+
+
+rule compress:
+    input:
+        vcf = rules.run_annovar.output.vcf,
+    output:
+        vcf = "results/genotypes/ALL.chr{chr_name}.annotated.biallelic.snps.hg19_multianno.vcf.gz",
+    shell:
+        """
+        bgzip -c {input.vcf} > {output.vcf}
+        tabix -p vcf {output.vcf}
+        rm {input.vcf}
+        """
+
+
+rule extract_exonic_snps:
+    input:
+        vcf = rules.extract_biallelic_snps.output.vcf,
+        file = rules.run_annovar.output.txt,
+    output:
+        synonymous_vcf = "results/exonic_data/ALL.chr{chr_name}.synonymous.vcf.gz",
+        nonsynonymous_vcf = "results/exonic_data/ALL.chr{chr_name}.nonsynonymous.vcf.gz",
+    shell:
+        """
+        bcftools view {input.vcf} -R <(grep -w synonymous {input.file} | awk '{{print $1"\\t"$2}}') | bgzip -c > {output.synonymous_vcf}
+        bcftools view {input.vcf} -R <(grep -w nonsynonymous {input.file} | awk '{{print $1"\\t"$2}}') | bgzip -c > {output.nonsynonymous_vcf}
+        tabix -p vcf {output.synonymous_vcf}
+        tabix -p vcf {output.nonsynonymous_vcf}
+        """
+
+
+rule concat_files:
+    input:
+        synonymous_vcfs = expand("results/exonic_data/ALL.chr{chr_name}.synonymous.vcf.gz", chr_name=chr_name_list),
+        nonsynonymous_vcfs = expand("results/exonic_data/ALL.chr{chr_name}.nonsynonymous.vcf.gz", chr_name=chr_name_list),
+    output:
+        synonymous_vcf = "results/exonic_data/ALL.synonymous.vcf.gz",
+        nonsynonymous_vcf = "results/exonic_data/ALL.nonsynonymous.vcf.gz",
+    shell:
+        """
+        bcftools concat {input.synonymous_vcfs} | bgzip -c > {output.synonymous_vcf}
+        bcftools concat {input.nonsynonymous_vcfs} | bgzip -c > {output.nonsynonymous_vcf}
+        tabix -p vcf {output.synonymous_vcf}
+        tabix -p vcf {output.nonsynonymous_vcf}
+        """

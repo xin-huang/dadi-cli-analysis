@@ -1,0 +1,103 @@
+population_list = [
+    'ACB',
+    'ASW',
+    'BEB',
+    'CDX',
+    'CEU',
+    'CHB',
+    'CHS',
+    'CLM',
+    'ESN',
+    #'FIN',
+    'GBR',
+    'GIH',
+    'GWD',
+    'IBS',
+    'ITU',
+    'JPT',
+    'KHV',
+    'LWK',
+    'MSL',
+    'MXL',
+    'PEL',
+    'PJL',
+    'PUR',
+    'STU',
+    'TSI',
+    'YRI',
+]
+
+sample_size_list = {
+    'ACB': 96*2,
+    'ASW': 61*2,
+    'BEB': 86*2,
+    'CDX': 93*2,
+    'CEU': 99*2,
+    'CHB': 103*2,
+    'CHS': 105*2,
+    'CLM': 94*2,
+    'ESN': 99*2,
+    'FIN': 99*2,
+    'GBR': 91*2,
+    'GIH': 103*2,
+    'GWD': 113*2,
+    'IBS': 107*2,
+    'ITU': 102*2,
+    'JPT': 104*2,
+    'KHV': 99*2,
+    'LWK': 99*2,
+    'MSL': 85*2,
+    'MXL': 64*2,
+    'PEL': 85*2,
+    'PJL': 96*2,
+    'PUR': 104*2,
+    'STU': 102*2,
+    'TSI': 107*2,
+    'YRI': 108*2,
+}
+
+time_list = [x for x in range(100)]
+
+
+rule all:
+    input:
+        expand("results/populations/{population}/dfe/folded/InferDFE/{population}.two_epoch_sel.lognormal.InferDFE.bestfits.ci", population=population_list),
+
+
+rule generate_bootstrapping_fs:
+    input:
+        synonymous_vcf = "results/populations/{population}/{population}.synonymous.biallelic.snps.vcf.gz",
+        nonsynonymous_vcf = "results/populations/{population}/{population}.nonsynonymous.biallelic.snps.vcf.gz",
+        info = "results/populations/{population}/{population}.info",
+    output:
+        synonymous_fs = expand("results/populations/{population}/dfe/folded/bootstrapping/{population}.synonymous.folded.bootstrapping.{time}.fs", time=time_list, allow_missing=True),
+        nonsynonymous_fs = expand("results/populations/{population}/dfe/folded/bootstrapping/{population}.nonsynonymous.folded.bootstrapping.{time}.fs", time=time_list, allow_missing=True),
+    params:
+        sample_size = lambda wildcards: sample_size_list[wildcards.population],
+        bootstrap = 100,
+        chunk_size = 1000000,
+        synonymous_prefix = lambda wildcards: f"results/populations/{wildcards.population}/dfe/folded/bootstrapping/{wildcards.population}.synonymous.folded",
+        nonsynonymous_prefix = lambda wildcards: f"results/populations/{wildcards.population}/dfe/folded/bootstrapping/{wildcards.population}.nonsynonymous.folded",
+    shell:
+        """
+        dadi-cli GenerateFs --vcf {input.synonymous_vcf} --pop-ids {wildcards.population} --pop-info {input.info} --projections {params.sample_size} --output {params.synonymous_prefix} --bootstrap {params.bootstrap} --chunk-size {params.chunk_size}
+        dadi-cli GenerateFs --vcf {input.nonsynonymous_vcf} --pop-ids {wildcards.population} --pop-info {input.info} --projections {params.sample_size} --output {params.nonsynonymous_prefix} --bootstrap {params.bootstrap} --chunk-size {params.chunk_size}
+        """
+
+
+rule get_dfe_intervals:
+    input:
+        fs = "results/populations/{population}/dfe/folded/{population}.nonsynonymous.folded.fs",
+        cache = "results/populations/{population}/dfe/folded/InferDFE/{population}.two_epoch_sel.spectra.bpkl",
+        popt = "results/populations/{population}/dfe/folded/InferDFE/{population}.two_epoch_sel.lognormal.InferDFE.bestfits",
+        bootstrapping_synonymous_fs = rules.generate_bootstrapping_fs.output.synonymous_fs,
+        bootstrapping_nonsynonymous_fs = rules.generate_bootstrapping_fs.output.nonsynonymous_fs,
+    output:
+        res = "results/populations/{population}/dfe/folded/InferDFE/{population}.two_epoch_sel.lognormal.InferDFE.bestfits.ci",
+    params:
+        model = 'lognormal',
+        bootstrapping_dir = lambda wildcards: f"results/populations/{wildcards.population}/dfe/folded/bootstrapping/",
+    shell:
+        """
+        dadi-cli StatDFE --fs {input.fs} --pdf1d {params.model} --cache1d {input.cache} --nomisid --dfe-popt {input.popt} --bootstrapping-synonymous-dir {params.bootstrapping_dir} --bootstrapping-nonsynonymous-dir {params.bootstrapping_dir} --output {output.res}
+        """
