@@ -1,0 +1,15 @@
+name: dadi-cli-analysis
+channels:
+        - conda-forge
+dependencies:
+        - bcftools
+        - dadi-cli
+        - matplotlib
+        - nlopt
+        - numpy
+        - pandas
+        - pip
+        - scipy
+        - snakemake==7.25.0
+        - pip:
+                - dadi>2.1.0
