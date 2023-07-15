@@ -1,0 +1,9 @@
+ext/annovar
+data/*
+logs/*
+results/*
+.snakemake/*
+nohup.out
+submit.sh
+ftp.1000genomes.ebi.ac.uk/*
+.downloaded
