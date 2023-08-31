@@ -55,9 +55,23 @@ rule extract_biallelic_snps:
         """
 
 
+rule download_annovar_db:
+    input:
+    output:
+        avsnp150 = "ext/annovar/humandb/hg19_avsnp150.txt",
+        dbnsfp42c = "ext/annovar/humandb/hg19_dbnsfp42c.txt",
+    shell:
+        """
+        ext/annovar/annotate_variation.pl -downdb -buildver hg19 -webfrom annovar avsnp150 ext/annovar/humandb/
+        ext/annovar/annotate_variation.pl -downdb -buildver hg19 -webfrom annovar dbnsfp42c ext/annovar/humandb/
+        """
+
+
 rule run_annovar:
     input:
         vcf = rules.extract_biallelic_snps.output.vcf,
+        avsnp150 = rules.download_annovar_db.output.avsnp150,
+        dbnsfp42c = rules.download_annovar_db.output.dbnsfp42c,
     output:
         vcf = "results/genotypes/ALL.chr{chr_name}.annotated.biallelic.snps.hg19_multianno.vcf",
         txt = "results/genotypes/ALL.chr{chr_name}.annotated.biallelic.snps.hg19_multianno.txt",
