@@ -4,7 +4,7 @@
 
 This repo contains [Snakemake](https://snakemake.readthedocs.io/en/stable/) pipelines for replicating the analysis in our `dadi-cli` paper. These pipelines were tested on Linux operating systems (Oracle Linux 8).
 
-To replicate our analysis, users should install [Anaconda](https://www.anaconda.com/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) first, then use the following commands to create a virtual environment for the analysis.
+To replicate our analysis, users should install [Anaconda](https://www.anaconda.com/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) first, then use the following commands to create a virtual environment for the analysis. According to the latest [guidelines](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html), it is recommended to install mamba via `mambaforge` or `miniforge`.
 
 ```
 conda install mamba -n base -c conda-forge
@@ -26,5 +26,16 @@ snakemake -s workflows/step4_plots.smk --profile slurm/
 ```
 
 In the `slurm` directory, a `config.yaml` file is provided. Users can adjust the parameters in this file based on the settings of their clusters.
+
+If users want to run the pipelines locally, please use the `-c` option, for example,
+
+```
+snakemake -s workflows/step1_download.smk -c 1
+snakemake -s workflows/step2_annovar.smk -c 1
+snakemake -s workflows/step3_dfes.smk -c 1
+snakemake -s workflows/step4_plots.smk -c 1
+```
+
+`-c` specifies the number of threads and `snakemake` could run jobs parallelly as many as possible with the given number of threads.
 
 Log information can be found in the `logs` directory when running the pipelines. After running the pipelines, users can find the figures of our results in the `results/plots` directory.
