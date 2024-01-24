@@ -4,10 +4,9 @@
 
 This repo contains [Snakemake](https://snakemake.readthedocs.io/en/stable/) pipelines for replicating the analysis in our `dadi-cli` paper. These pipelines were tested on Linux operating systems (Oracle Linux 8).
 
-To replicate our analysis, users should install [Anaconda](https://www.anaconda.com/) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) first, then use the following commands to create a virtual environment for the analysis. According to the latest [guidelines](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html), it is recommended to install mamba via `mambaforge` or `miniforge`.
+To replicate our analysis, users should install `mamba` first. According to the latest [guidelines](https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html), it is recommended to install `mamba` via `mambaforge` or `miniforge`, then use the following commands to create a virtual environment for the analysis.
 
 ```
-conda install mamba -n base -c conda-forge
 mamba env create -f environment.yml
 conda activate dadi-cli-analysis
 ```
