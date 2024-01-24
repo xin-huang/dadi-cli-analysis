@@ -78,7 +78,7 @@ rule run_annovar:
     resources:
         cpus = 8,
     params:
-        output_prefix = lambda wildcards: f"results/genotypes/ALL.chr{wildcards.chr_name}.annotated.biallelic.snps",
+        output_prefix = "results/genotypes/ALL.chr{chr_name}.annotated.biallelic.snps",
     shell:
         """
         ext/annovar/table_annovar.pl {input.vcf} ext/annovar/humandb/ -buildver hg19 -out {params.output_prefix} -remove -protocol refGene,avsnp150,dbnsfp42c -operation g,f,f -nastring . -vcfinput --thread {resources.cpus}
