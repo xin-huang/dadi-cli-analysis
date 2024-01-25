@@ -76,7 +76,7 @@ rule run_annovar:
         vcf = "results/genotypes/ALL.chr{chr_name}.annotated.biallelic.snps.hg19_multianno.vcf",
         txt = "results/genotypes/ALL.chr{chr_name}.annotated.biallelic.snps.hg19_multianno.txt",
     resources:
-        cpus = 8,
+        time=2880, cpus=8, mem_gb=64,
     params:
         output_prefix = "results/genotypes/ALL.chr{chr_name}.annotated.biallelic.snps",
     shell:

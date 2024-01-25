@@ -2,13 +2,13 @@ cluster:
         mkdir -p logs/{rule} &&
         sbatch
                 --cpus-per-task={resources.cpus}
-                --mem={resources.mem_mb}
+                --mem={resources.mem_gb}G
                 --time={resources.time}
                 --job-name=smk-{rule}-{wildcards}
                 --output=logs/{rule}/{rule}-{wildcards}-%j.out
 default-resources:
         - time=1440
-        - mem_mb=10000
+        - mem_gb=10
         - cpus=1
 restart-times: 3
 max-jobs-per-second: 10
