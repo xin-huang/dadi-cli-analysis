@@ -100,7 +100,7 @@ rule compress:
 
 rule extract_exonic_snps:
     input:
-        vcf = rules.extract_biallelic_snps.output.vcf,
+        vcf = rules.compress.output.vcf,
         file = rules.run_annovar.output.txt,
     output:
         synonymous_vcf = "results/exonic_data/ALL.chr{chr_name}.synonymous.vcf.gz",
