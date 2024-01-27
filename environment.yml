@@ -4,7 +4,7 @@ channels:
 dependencies:
         - bcftools
         - dadi-cli
-        - matplotlib
+        - matplotlib==3.8.2
         - nlopt
         - numpy
         - pandas
