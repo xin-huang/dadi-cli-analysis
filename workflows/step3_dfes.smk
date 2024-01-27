@@ -151,7 +151,7 @@ rule infer_dm:
     resources:
         cpus = 8,
     params:
-        model = lambda wildcards: wildcards.model,
+        model = "{model}",
         p0 = lambda wildcards: model_params_list[wildcards.model]['p0'],
         ubounds = lambda wildcards: model_params_list[wildcards.model]['ubounds'],
         lbounds = lambda wildcards: model_params_list[wildcards.model]['lbounds'],
@@ -172,7 +172,7 @@ rule generate_cache:
     resources:
         cpus = 8,
     params:
-        model = lambda wildcards: f"{wildcards.model}_sel",
+        model = "{model}_sel",
         sample_size = lambda wildcards: sample_size_list[wildcards.population],
         grid_size = "800 1000 1200",
         gamma_pts = 2000,
@@ -192,7 +192,7 @@ rule infer_dfe:
     resources:
         cpus = 8,
     params:
-        dfe = lambda wildcards: wildcards.dfe,
+        dfe = "{dfe}",
         p0 = lambda wildcards: dfe_params_list[wildcards.dfe]['p0'],
         ubounds = lambda wildcards: dfe_params_list[wildcards.dfe]['ubounds'],
         lbounds = lambda wildcards: dfe_params_list[wildcards.dfe]['lbounds'],
@@ -227,10 +227,10 @@ rule godambe_ci:
     output:
         dfe_godambe_ci = "results/dfes/{population}/unfolded/StatDFE/{population}.{model}.{dfe}.godambe.ci",
     params:
-        synonymous_dir = lambda wildcards: f"results/dfes/{wildcards.population}/unfolded/{wildcards.population}_bootstrapping_syn",
-        nonsynonymous_dir = lambda wildcards: f"results/dfes/{wildcards.population}/unfolded/{wildcards.population}_bootstrapping_non",
-        synonymous_output_prefix = lambda wildcards: f"results/dfes/{wildcards.population}/unfolded/{wildcards.population}_bootstrapping_syn/{wildcards.population}.synonymous.unfolded",
-        nonsynonymous_output_prefix = lambda wildcards: f"results/dfes/{wildcards.population}/unfolded/{wildcards.population}_bootstrapping_non/{wildcards.population}.nonsynonymous.unfolded",
+        synonymous_dir = "results/dfes/{population}/unfolded/{population}_bootstrapping_syn",
+        nonsynonymous_dir = "results/dfes/{population}/unfolded/{population}_bootstrapping_non",
+        synonymous_output_prefix = "results/dfes/{population}/unfolded/{population}_bootstrapping_syn/{population}.synonymous.unfolded",
+        nonsynonymous_output_prefix = "results/dfes/{population}/unfolded/{population}_bootstrapping_non/{population}.nonsynonymous.unfolded",
         sample_size = lambda wildcards: sample_size_list[wildcards.population],
     shell:
         """
@@ -250,7 +250,7 @@ rule single_pop_summary:
         res = "results/dfes/{population}/unfolded/{population}.{model}.{dfe}.res.txt",
     shell:
         """
-        paste <(grep Converged {input.dfe_bestfit} -A 2 | tail -1) <(grep "step size 0.001" {input.dfe_godambe_ci} -A 1 | tail -1 | sed 's/\[//' | sed 's/\]//' | awk '{{print $(NF-2)"\\t"$(NF-1)"\\t"$NF}}') <(grep "step size 0.001" {input.dfe_godambe_ci} -A 2 | tail -1 | sed 's/\[//' | sed 's/\]//' | awk '{{print $(NF-2)"\\t"$(NF-1)"\\t"$NF}}') | awk -v pop={wildcards.population} -v demog={wildcards.model} -v dfe={wildcards.dfe} '{{print pop"\\t"demog"\\t"dfe"\\t"$0}}' > {output.res}
+        paste <(grep Converged {input.dfe_bestfit} -A 2 | tail -1) <(grep "step size 0.001" {input.dfe_godambe_ci} -A 1 | tail -1 | sed 's/\\[//' | sed 's/\\]//' | awk '{{print $(NF-2)"\\t"$(NF-1)"\\t"$NF}}') <(grep "step size 0.001" {input.dfe_godambe_ci} -A 2 | tail -1 | sed 's/\\[//' | sed 's/\\]//' | awk '{{print $(NF-2)"\\t"$(NF-1)"\\t"$NF}}') | awk -v pop={wildcards.population} -v demog={wildcards.model} -v dfe={wildcards.dfe} '{{print pop"\\t"demog"\\t"dfe"\\t"$0}}' > {output.res}
         """
 
 
