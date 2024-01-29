@@ -81,7 +81,6 @@ dfe_params_list = {
 
 rule all:
     input:
-        expand("results/dfes/{population}/unfolded/InferDFE/{population}.{model}.{dfe}.mut.props.png", population=population_list, model=model_list, dfe=dfe_list),
         expand("results/dfes/{population}/unfolded/StatDFE/{population}.{model}.{dfe}.godambe.ci", population=population_list, model=model_list, dfe=dfe_list),
         "results/dfes/all.res.txt",
 
@@ -202,17 +201,6 @@ rule infer_dfe:
     shell:
         """
         dadi-cli InferDFE --fs {input.fs} --cache1d {input.cache} --demo-popt {input.dm_bestfit} --output-prefix {params.output_prefix} --pdf1d {params.dfe} --p0 {params.p0} --ubounds {params.ubounds} --lbounds {params.lbounds} --ratio {params.ratio} --cpus {resources.cpus} --force-convergence {params.optimizations}
-        """
-
-
-rule plot_mut_prop:
-    input:
-        dfe_bestfit = rules.infer_dfe.output.bestfit,
-    output:
-        png = "results/dfes/{population}/unfolded/InferDFE/{population}.{model}.{dfe}.mut.props.png"
-    shell:
-        """
-        dadi-cli Plot --pdf1d {wildcards.dfe} --dfe-popt {input.dfe_bestfit} --output {output.png}
         """
 
 
