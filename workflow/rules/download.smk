@@ -17,12 +17,14 @@
 #    https://www.gnu.org/licenses/gpl-3.0.en.html
 
 
-rule download:
+rule download_1KG:
     input:
     output:
         "results/data/1KG/.downloaded",
     params:
         dir = "results/data/1KG"
+    log:
+        "logs/download/download_1KG.log"
     shell:
         """
         cd {params.dir}
