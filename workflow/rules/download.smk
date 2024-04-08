@@ -39,9 +39,9 @@ rule download_1KG:
 rule download_annovar_db:
     input:
     output:
-        "resources/annovar/humandb/{refgen}_{database}.txt",
+        "resources/annovar/humandb/{ref_gene}_{database}.txt",
     log:
-        "logs/download/download.annovar.db.{refgen}.{database}.log"
+        "logs/download/download.annovar.db.{ref_gene}.{database}.log"
     shell:
         """
         resources/annovar/annotate_variation.pl -downdb -buildver {wildcards.refgen} \

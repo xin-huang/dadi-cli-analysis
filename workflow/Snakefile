@@ -25,18 +25,33 @@ import numpy as np
 
 
 dataset = config["dataset"]
+chr_num = config["chr_num"]
+input_prefix = config["input_prefix"]
+input_extension = config["input_extension"]
+output_prefix = config["output_prefix"]
+ref_gene = config["ref_gene"]
+
+chr_name_list = [c+1 for c in range(chr_num)]
+
+
+def get_input_vcf(wildcards):
+    return os.path.join(
+        "results/{dataset}/data/",
+        f"{input_prefix}.chr{wildcards.chr_name}.{input_extension}"
+    )
 
 
 ##### Target rules #####
 
 rule all:
     input:
-        #"results/1KG/data/.downloaded",
-        #expand("resources/annovar/humandb/{refgene}_{database}.txt",
-        #       refgene=["hg19", "hg38"], database=["avsnp150", "dbnsfp42c"])
-        expand("results/{dataset}/exonic_data/ALL.{mut_type}.vcf.gz",
-               dataset=dataset, mut_type=["synonymous", "nonsynonymous"])
-        #expand("results/exonic_data/ALL.{mut_type}.vcf.gz", mut_type=['synonymous', 'nonsynonymous']),
+        #expand("results/{dataset}/biallelic_snps/{output_prefix}.chr{chr_name}.vcf.gz",
+        #       dataset=dataset, output_prefix=output_prefix, chr_name=chr_name_list),
+        expand("results/{dataset}/annotated_snps/{output_prefix}.chr{chr_name}.annotated.biallelic.snps.{ref_gene}_multianno.vcf.gz",
+               dataset=dataset, output_prefix=output_prefix, chr_name=chr_name_list, ref_gene=ref_gene)
+        #expand("results/{dataset}/exonic_data/{output_prefix}.{ref_gene}.{mut_type}.vcf.gz",
+        #       dataset=dataset, output_prefix=output_prefix, ref_gene=ref_gene,
+        #       mut_type=["synonymous", "nonsynonymous"])
 
 
 ##### Modules #####
