@@ -31,3 +31,17 @@ rule download_1KG:
         wget -rc -np -l 1 -R "index.html*" -e robots=off https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/
         touch .downloaded
         """
+
+
+rule download_annovar_db:
+    input:
+    output:
+        avsnp150 = "resources/annovar/humandb/hg19_avsnp150.txt",
+        dbnsfp42c = "resources/annovar/humandb/hg19_dbnsfp42c.txt",
+    log:
+        "logs/download_annovar_db/"
+    shell:
+        """
+        resources/annovar/annotate_variation.pl -downdb -buildver hg19 -webfrom annovar avsnp150 ext/annovar/humandb/
+        resources/annovar/annotate_variation.pl -downdb -buildver hg19 -webfrom annovar dbnsfp42c ext/annovar/humandb/
+        """
