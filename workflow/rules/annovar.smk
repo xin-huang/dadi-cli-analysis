@@ -64,32 +64,26 @@ rule extract_exonic_snps:
         vcf = rules.compress.output.vcf,
         file = rules.run_annovar.output.txt,
     output:
-        synonymous_vcf = "results/{dataset}/exonic_data/ALL.chr{chr_name}.synonymous.vcf.gz",
-        nonsynonymous_vcf = "results/{dataset}/exonic_data/ALL.chr{chr_name}.nonsynonymous.vcf.gz",
+        vcf = "results/{dataset}/exonic_data/ALL.chr{chr_name}.{mut_type}.vcf.gz",
     log:
-        "logs/extract_exonic_snps/{dataset}/{chr_name}.log"
+        "logs/extract_exonic_snps/{dataset}/{chr_name}.{mut_type}.log"
     shell:
         """
-        bcftools view {input.vcf} -R <(grep -w synonymous {input.file} | awk '{{print $1"\\t"$2}}') | bgzip -c > {output.synonymous_vcf}
-        bcftools view {input.vcf} -R <(grep -w nonsynonymous {input.file} | awk '{{print $1"\\t"$2}}') | bgzip -c > {output.nonsynonymous_vcf}
-        tabix -p vcf {output.synonymous_vcf}
-        tabix -p vcf {output.nonsynonymous_vcf}
+        bcftools view {input.vcf} -R <(grep -w {wildcards.mut_type} {input.file} | awk '{{print $1"\\t"$2}}') | bgzip -c > {output.vcf}
+        tabix -p vcf {output.vcf}
         """
 
 
 rule concat_files:
     input:
-        synonymous_vcfs = expand("results/{dataset}/exonic_data/ALL.chr{chr_name}.synonymous.vcf.gz", chr_name=chr_name_list),
-        nonsynonymous_vcfs = expand("results/{dataset}/exonic_data/ALL.chr{chr_name}.nonsynonymous.vcf.gz", chr_name=chr_name_list),
+        vcfs = expand("results/{dataset}/exonic_data/ALL.chr{chr_name}.{mut_type}.vcf.gz", 
+                      chr_name=chr_name_list, allow_missing=True),
     output:
-        synonymous_vcf = "results/{dataset}/exonic_data/ALL.synonymous.vcf.gz",
-        nonsynonymous_vcf = "results/{dataset}/exonic_data/ALL.nonsynonymous.vcf.gz",
+        vcf = "results/{dataset}/exonic_data/ALL.{mut_type}.vcf.gz",
     log:
-        "logs/concat_files/{dataset}/concat.log"
+        "logs/concat_files/{dataset}/concat.{mut_type}.log"
     shell:
         """
-        bcftools concat {input.synonymous_vcfs} | bgzip -c > {output.synonymous_vcf}
-        bcftools concat {input.nonsynonymous_vcfs} | bgzip -c > {output.nonsynonymous_vcf}
-        tabix -p vcf {output.synonymous_vcf}
-        tabix -p vcf {output.nonsynonymous_vcf}
+        bcftools concat {input.vcfs} | bgzip -c > {output.vcf}
+        tabix -p vcf {output.vcf}
         """
