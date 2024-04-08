@@ -29,14 +29,16 @@ import numpy as np
 
 rule all:
     input:
-        #"results/data/1KG/.downloaded"
-        expand("results/exonic_data/ALL.{mut_type}.vcf.gz", mut_type=['synonymous', 'nonsynonymous']),
+        "results/1KG/data/.downloaded",
+        expand("resources/annovar/humandb/{refgene}_{database}.txt",
+               refgene=["hg19", "hg38"], database=["avsnp150", "dbnsfp42c"])
+        #expand("results/exonic_data/ALL.{mut_type}.vcf.gz", mut_type=['synonymous', 'nonsynonymous']),
 
 
 ##### Modules #####
 
 
 include: "rules/download.smk"
-include: "rules/annovar.smk"
+#include: "rules/annovar.smk"
 #include: "rules/dfes.smk"
 #include: "rules/plots.smk"

@@ -20,15 +20,18 @@
 rule download_1KG:
     input:
     output:
-        "results/data/1KG/.downloaded",
+        "results/1KG/data/.downloaded",
     params:
-        dir = "results/data/1KG"
+        dir = "results/1KG/data",
+        dl_dir = "ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/",
     log:
-        "logs/download/download_1KG.log"
+        "logs/download/download.1KG.log"
     shell:
         """
         cd {params.dir}
-        wget -rc -np -l 1 -R "index.html*" -e robots=off https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/
+        wget -rc -np -l 1 -R "index.html*" -e robots=off https://{params.dl_dir}
+        mv {params.dl_dir}* .
+        rm -r {params.dl_dir}
         touch .downloaded
         """
 
@@ -36,12 +39,11 @@ rule download_1KG:
 rule download_annovar_db:
     input:
     output:
-        avsnp150 = "resources/annovar/humandb/hg19_avsnp150.txt",
-        dbnsfp42c = "resources/annovar/humandb/hg19_dbnsfp42c.txt",
+        "resources/annovar/humandb/{refgen}_{database}.txt",
     log:
-        "logs/download_annovar_db/"
+        "logs/download/download.annovar.db.{refgen}.{database}.log"
     shell:
         """
-        resources/annovar/annotate_variation.pl -downdb -buildver hg19 -webfrom annovar avsnp150 ext/annovar/humandb/
-        resources/annovar/annotate_variation.pl -downdb -buildver hg19 -webfrom annovar dbnsfp42c ext/annovar/humandb/
+        resources/annovar/annotate_variation.pl -downdb -buildver {wildcards.refgen} \
+             -webfrom annovar {wildcards.database} resources/annovar/humandb/
         """
