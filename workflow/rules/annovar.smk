@@ -43,8 +43,9 @@ rule run_annovar:
         "logs/run_annovar/{dataset}/{output_prefix}.chr{chr_name}.{ref_gene}.log",
     resources:
         time = 2880, 
-        cpus = 8, 
-        mem_gb = 64,
+        cpus = 64, 
+        mem_gb = 512,
+        partition = "himem",
     params:
         vcf = "results/{dataset}/annotated_snps/{output_prefix}.chr{chr_name}.annotated.biallelic.snps.{ref_gene}_multianno.vcf",
         output_prefix = "results/{dataset}/annotated_snps/{output_prefix}.chr{chr_name}.annotated.biallelic.snps",
